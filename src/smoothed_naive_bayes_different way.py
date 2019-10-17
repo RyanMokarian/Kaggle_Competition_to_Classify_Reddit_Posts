@@ -1,3 +1,11 @@
+"""
+alpha =1, (50-50 data divide) accuracy ->   0.84%
+alpha =0.95, (50-50 data divide) accuracy ->   0.84%
+alpha = 0.85, (50-50 data divide) accuracy ->   0.839%
+alpha =0.75, (50-50 data divide) accuracy ->   0.83%
+alpha =0.5, (50-50 data divide) accuracy ->   0.83%
+alpha =0.05, (50-50 data divide) accuracy ->   0.82%
+"""
 import string
 
 import operator
@@ -5,7 +13,6 @@ import pandas as pd
 import nltk
 from nltk.corpus import stopwords
 import numpy as np
-from nltk.stem.porter import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 
 from src.utils import write_object_to_file, read_object_from_file
@@ -79,24 +86,9 @@ def compute_likelihood_for_this_class(p_of_term_belonging_to_class, prior, token
     sum_p_X_given_c = 0.0
     for p in p_xi_given_c:
         sum_p_X_given_c += np.log(p)
-    test = np.sum(np.log(p_xi_given_c))
     log_p_X_given_c_plus_log_prior = sum_p_X_given_c + np.log(prior)
 
     return log_p_X_given_c_plus_log_prior
-
-
-def compute_priors():
-    """
-    This document computes priors and total documents in each class
-    :return:
-    priors : # of documents belong to one class / total number of documents
-    compute_total_documents_for_each_class : total number of documents in this class
-    """
-    df = pd.read_pickle("data_train.pkl")
-    data = {'post': list(df)[0], 'class': list(df)[1]}
-    df_train = pd.DataFrame(data)
-    priors = compute_prior_for_each_class(df_train)
-    return priors
 
 
 def train(df_train):
@@ -149,7 +141,6 @@ def calculate_tf_and_sum_of_all_docs(df_train):
     :param df_train:
     :return:
     """
-    # below list added
     set_of_all_words_in_corpus = set()
     term_frequency_per_class = {}
     for index, row in df_train.iterrows():
@@ -196,6 +187,7 @@ def split(n):
     df = pd.read_pickle("data_train.pkl")
     data = {'post': list(df)[0], 'class': list(df)[1]}
     df_train = pd.DataFrame(data)
+    df_train = df_train.sample(frac=1).reset_index(drop=True)  # shuffle the dataset
     length = df_train.__len__()
     validation_size = int(length * n / 100)
     df_train = df_train.head(length - validation_size)
@@ -238,7 +230,7 @@ if __name__ == "__main__":
     import time
 
     start_time = time.time()
-    df_train, df_validation = split(40)
+    df_train, df_validation = split(25)
     train(df_train)
 
     priors = compute_prior_for_each_class(df_train)
