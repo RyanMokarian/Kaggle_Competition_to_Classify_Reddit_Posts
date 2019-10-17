@@ -18,35 +18,29 @@ classes = ['hockey', 'nba', 'leagueoflegends', 'soccer', 'funny', 'movies', 'ani
            'Overwatch', 'trees', 'GlobalOffensive',
            'nfl', 'AskReddit', 'gameofthrones',
            'conspiracy', 'worldnews', 'wow', 'europe', 'canada', 'Music', 'baseball']
-set_of_all_terms_in_all_classes = set()
 
 
-def test():
+def test(df_test, priors):
     """
     This method contains the processes that needs to be done to predict the classes for the test data
     It loads the predicted data (p_t_give_c.pkl) and applies Bye theorem to predict the classes
     and write them into a CSV file
     :return:
     """
-    priors = compute_priors()
-    df_test = pd.read_pickle("data_test.pkl")
-    data_test = {'category': list(df_test)}
-    df_test = pd.DataFrame(data_test)
     probability_of_t_given_c_all_classes = read_object_from_file("p_t_give_c.pkl")
     classes_test = []
     x = 0
     for index, row in df_test.iterrows():
         x += 1
-        tokenized = nltk.word_tokenize(row["category"])
-        tokens = apply_preprocessing_on_list_of_text(tokenized)
+        tokenized = nltk.word_tokenize(row["post"])
+        tokens = apply_pre_processing(tokenized)
         classes_test.append(
             compute_max_likelihood_for_all_classes(probability_of_t_given_c_all_classes,
                                                    priors,
                                                    tokens))
         if x % 50 == 0:
             print(str(x) + " items processed")
-    df_test = pd.DataFrame(classes_test)
-    df_test.to_csv("submission.csv")
+    return classes_test
 
 
 def compute_max_likelihood_for_all_classes(probability_of_t_given_c_all_classes,
@@ -62,9 +56,9 @@ def compute_max_likelihood_for_all_classes(probability_of_t_given_c_all_classes,
 
 
 def compute_likelihood_for_this_class(p_of_term_belonging_to_class, prior, tokens):
-# S
-# Here log formula can be used
-# E
+    # S
+    # Here log formula can be used
+    # E
     """
     log p(c|d) =  log(p(x1,x2,...,xn|c) + log p(c)   (note the denominator of p(d) is disregarded)
     WHERE log p(x1,x2,...,xn|c) = log p(x1|c) + log p(x2|c)+ ... + log p(xn|c)
@@ -80,9 +74,9 @@ def compute_likelihood_for_this_class(p_of_term_belonging_to_class, prior, token
                 0)  # never seen feature and class in training data https://en.wikipedia.org/wiki/Naive_Bayes_classifier
     # p_X_given_c = np.prod(p_xi_given_c)
     # p_X_given_c_mult_prior = np.multiply(p_X_given_c, prior)
-    sum_p_X_given_c = 0
+    sum_p_X_given_c = 0.0
     for p in p_xi_given_c:
-        sum_p_X_given_c+= np.log(p)
+        sum_p_X_given_c += np.log(p)
     log_p_X_given_c_plus_log_prior = sum_p_X_given_c + np.log(prior)
 
     return log_p_X_given_c_plus_log_prior
@@ -102,19 +96,20 @@ def compute_priors():
     return priors
 
 
-def train():
+def train(df_train):
     """
     This function computes probability of terms for all classes and store them into a file
     :return:
     """
-    df = pd.read_pickle("data_train.pkl")
-    data = {'post': list(df)[0], 'class': list(df)[1]}
-    df_train = pd.DataFrame(data)
-    probability_of_t_given_c_all_classes = compute_probability_of_terms_for_all_classes(df_train)
+    # count_of_all_words_in_corpus = calculate_v(df_train)
+    count_of_all_words_in_corpus = 33847
+    print("All teh words in the corpus is " + str(count_of_all_words_in_corpus))
+    probability_of_t_given_c_all_classes = compute_probability_of_terms_for_all_classes(df_train,
+                                                                                        count_of_all_words_in_corpus)
     write_object_to_file(probability_of_t_given_c_all_classes, "p_t_give_c.pkl")
 
 
-def compute_probability_of_terms_for_all_classes(df_train):
+def compute_probability_of_terms_for_all_classes(df_train, count_of_all_words_in_corpus):
     """
     This function computes probability of terms for all classes
 #S
@@ -125,24 +120,22 @@ def compute_probability_of_terms_for_all_classes(df_train):
     }
     """
 
-# below only a set of words for all classes is computed.										   
+    probability_of_t_given_c_all_classes = {}
     for a_class in classes:
-        list_of_all_words_in_this_class, set_of_words_for_a_class = get_bag_of_words_for_a_class(a_class, df_train)
-        set_of_all_terms_in_all_classes.update(set(set_of_words_for_a_class))
-        print("class:" + str(a_class) + " is Done for getting global terms!")
-
-    probability_of_t_given_c_all_classes = {}											 
-    for a_class in classes:
-# below, list_of_words added
+        # below, list_of_words added
         list_of_words, set_of_words, = get_bag_of_words_for_a_class(a_class, df_train)
-# below set_of_words changed to list_of_words
-        probability_of_t_given_c = compute_probability_of_term_occurrence_in_this_class(list_of_words, list_of_words)
+        # below set_of_words changed to list_of_words
+        probability_of_t_given_c = compute_probability_of_term_occurrence_in_this_class(list_of_words,
+                                                                                        set_of_words,
+                                                                                        count_of_all_words_in_corpus)
         probability_of_t_given_c_all_classes[a_class] = probability_of_t_given_c
         print("class:" + str(a_class) + " is Done!")
     return probability_of_t_given_c_all_classes
 
 
-def compute_probability_of_term_occurrence_in_this_class(list_of_words_in_a_class, set_of_words_in_a_class):
+def compute_probability_of_term_occurrence_in_this_class(list_of_words_in_a_class,
+                                                         set_of_words_in_a_class,
+                                                         count_of_all_words_in_corpus):
     """
     This function computes the p(t|c) for that specif class
 #S
@@ -161,38 +154,65 @@ def compute_probability_of_term_occurrence_in_this_class(list_of_words_in_a_clas
             if term in doc:
                 term_frequency_in_documents += 1
         # probability_of_t_given_c[term] = term_frequency_in_documents / total_number_of_docs_in_c
-        probability_of_t_given_c[term] = (term_frequency_in_documents + 1)/ (total_number_of_words_in_c + len(set_of_all_terms_in_all_classes))
+        alpha = 1.0
+        nominator = np.add(float(term_frequency_in_documents), alpha)
+        denominator = np.add(np.multiply(float(total_number_of_words_in_c), alpha), float(count_of_all_words_in_corpus))
+        probability = np.divide(nominator, denominator)
+        p = (term_frequency_in_documents + alpha) / (
+                (total_number_of_words_in_c * alpha) + count_of_all_words_in_corpus)
+        probability_of_t_given_c[term] = probability
     return probability_of_t_given_c
 
 
 def get_bag_of_words_for_a_class(a_class, df_train):
-
     list_of_tokenized_documents_in_this_class = list()
     set_of_all_terms_in_this_class = set()
-# below list added
+    # below list added
     list_of_all_terms_in_this_class = list()
     for index, row in df_train.iterrows():
         if row["class"] == a_class:
             tokenized = nltk.word_tokenize(row["post"])
-            pre_processed = apply_preprocessing_on_list_of_text(tokenized)
+            pre_processed = apply_pre_processing(tokenized)
             set_of_all_terms_in_this_class.update(set(pre_processed))
-# below line added
+            # below line added
             list_of_all_terms_in_this_class.extend(pre_processed)
 
     return list_of_all_terms_in_this_class, set_of_all_terms_in_this_class
 
 
-def apply_preprocessing_on_list_of_text(a_list):
-    # case folding
-    lower_case_list = [x.lower() for x in a_list]
-    # keep alphabetic characters
-    words = [word for word in lower_case_list if word.isalpha()]
-    # remove punctuations and stopwords
-    words = [w for w in words if not w in stopwords]
-    # apply stemming
+def calculate_v(df_train):
+    """
+    Calculating all the rows in the corups (after pre_processing )
+    We keep duplicates intentionally because in compute_probability_of_term_occurrence_in_this_class
+    we also have duplicates and iterating over a list of words in that class
+    :param df_train:
+    :return:
+    """
+    # below list added
+    set_of_all_words_in_corpus = set()
+    for index, row in df_train.iterrows():
+        tokenized = nltk.word_tokenize(row["post"])
+        pre_processed = apply_pre_processing(tokenized)
+        set_of_all_words_in_corpus.update(pre_processed)
+        if index % 500 == 0:
+            print("Index #" + str(index) + " is processed to the global terms to calculate V")
+
+    return len(set_of_all_words_in_corpus)
+
+
+def apply_pre_processing(a_list):
+    pre_processed = list()
     porter = PorterStemmer()
-    stemmed = [porter.stem(word) for word in words]
-    return stemmed
+    for word in a_list:
+        word = word.lower()
+        if not word.isalpha():
+            continue
+        if word in stopwords:
+            continue
+        word = porter.stem(word)
+        pre_processed.append(word)
+
+    return pre_processed
 
 
 def compute_prior_for_each_class(df_train):
@@ -203,10 +223,64 @@ def compute_total_documents_for_each_class(df_train):
     return df_train["class"].value_counts()
 
 
+def split(n):
+    df = pd.read_pickle("data_train.pkl")
+    data = {'post': list(df)[0], 'class': list(df)[1]}
+    df_train = pd.DataFrame(data)
+    length = df_train.__len__()
+    validation_size = int(length * n / 100)
+    df_train = df_train.head(length - validation_size)
+    df_validation = df_train.head(validation_size)
+    return df_train, df_validation
+
+
+def score(predictions, result):
+    count = 0
+    for i in range(len(predictions)):
+        if (predictions[i] == result[i]):
+            count += 1
+    return count / len(predictions)
+
+
+def get_train_dataframe():
+    df = pd.read_pickle("data_train.pkl")
+    data = {'post': list(df)[0], 'class': list(df)[1]}
+    return pd.DataFrame(data)
+
+
+def generate_submission_csv(test_labels):
+    df_test = pd.DataFrame(test_labels)
+    df_test.to_csv("submission.csv")
+
+
+def get_test_data():
+    df_test = pd.read_pickle("data_test.pkl")
+    data_test = {'post': list(df_test)}
+    return pd.DataFrame(data_test)
+
+
 if __name__ == "__main__":
     """
     First run train() method
     Then Run test() method
     """
-    train()
-    # test()
+    # the followng is just for our test to save our submissions
+    df_train, df_validation = split(40)
+
+    train(df_train)
+
+    priors = compute_prior_for_each_class(df_train)
+    classes_test = test(df_validation, priors)
+    print(classes_test)
+    score = score(np.array(classes_test), df_validation["class"].to_numpy())
+    print("Score is equal to: " + str(score))
+
+
+
+    # uncomment below lines when you want to run a submission in Kaggle and comment out the lines above
+    # df_train = get_train_dataframe()
+    # train(df_train)
+    # df_test = get_test_data()
+    # priors = compute_prior_for_each_class(df_train)
+    # classes_test = test(df_test, priors)
+    # generate_submission_csv(classes_test)
