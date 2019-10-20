@@ -228,7 +228,7 @@ def run_classifier_and_generate_csv():
 
     start_time = time.time()
     UTILS = Utils()
-    NAIVE_BAYES = NaiveBayes(1)
+    NAIVE_BAYES = NaiveBayes(0.5)
     df_train = UTILS.get_train_data()
     NAIVE_BAYES.fit(df_train)
 
