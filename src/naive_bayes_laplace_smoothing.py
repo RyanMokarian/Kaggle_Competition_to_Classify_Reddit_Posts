@@ -193,8 +193,6 @@ class NaiveBayes:
         lemmatizer = WordNetLemmatizer()
         for word in a_list:
             word = word.lower()
-            if not word.isalpha():
-                continue
             if word in self.stopwords:
                 continue
             word = lemmatizer.lemmatize(word)
@@ -208,7 +206,7 @@ def verify_with_train_data():
     This method split the training data into train, validation to verify the model performance locally
     :return:
     """
-    NAIVE_BAYES = NaiveBayes(1)
+    NAIVE_BAYES = NaiveBayes(0.5)
     start_time = time.time()
     df_train, df_validation = Utils.split(30)
     NAIVE_BAYES.fit(df_train)
