@@ -1,7 +1,16 @@
-## Project
-This Project contains a text classifier implemented using Naive Bayes algorithm.
 
-It uses Laplace Smoothing to deal with unseen data
+'''
+****************************************************************
+*	Title: " Kaggle Competition to Classify Reddit Posts"
+
+*	Category: Machine Learning
+
+*	Authors: Ryan Mokarian, Maysam Mokarian
+****************************************************************
+	Description:
+	This Project contains a text classifier implemented using Naive Bayes algorithm. It uses Laplace Smoothing to deal with unseen data.
+'''
+
 
 ## Run the Project
 
